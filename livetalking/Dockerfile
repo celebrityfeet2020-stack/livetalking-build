@@ -117,18 +117,9 @@ RUN mkdir -p /app/LiveTalking/data/avatars/avator_1/full_imgs \
     /app/LiveTalking/web \
     /tmp/audio
 
-# 下载MuseTalk模型
-RUN python -c "\
-from huggingface_hub import snapshot_download; \
-import os; \
-os.makedirs('/app/LiveTalking/models/musetalk', exist_ok=True); \
-try: \
-    snapshot_download('TMElyralab/MuseTalk', local_dir='/app/LiveTalking/models/musetalk', ignore_patterns=['*.md', '*.txt']); \
-    print('MuseTalk model downloaded successfully'); \
-except Exception as e: \
-    print(f'Warning: MuseTalk model download failed: {e}'); \
-    print('Model will be downloaded on first run'); \
-"
+# 跳过构建时的模型下载，模型将在运行时下载
+# 这样可以避免HuggingFace访问限制导致的构建失败
+RUN echo "MuseTalk model will be downloaded on first run"
 
 # 复制自定义配置和修复文件
 COPY app_fixed.py /app/LiveTalking/app.py

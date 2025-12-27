@@ -72,3 +72,22 @@ av==10.0.0版本安装失败，可能与其他依赖不兼容。
 
 **解决方案：**
 修改av版本为11.0.0或移除版本限制。
+
+
+## LiveTalking 构建失败 (第三次)
+
+**错误信息：**
+```
+ERROR: failed to build: failed to solve: process "/bin/sh -c python -c \"from huggingface_hub import snapshot_download; ..." did not complete successfully: exit code: 1
+```
+
+**原因分析：**
+MuseTalk模型下载失败。可能是因为：
+1. HuggingFace访问限制
+2. 模型仓库需要认证
+3. 网络超时
+
+**解决方案：**
+1. 移除构建时的模型下载步骤
+2. 让模型在运行时下载
+3. 或者使用try-except包裹并允许失败
