@@ -80,10 +80,10 @@ RUN pip install --no-cache-dir aiortc==1.9.0
 
 # 安装音视频处理库
 RUN pip install --no-cache-dir \
-    av==10.0.0 \
-    soundfile==0.12.1 \
-    librosa==0.10.1 \
-    pydub==0.25.1
+    av \
+    soundfile \
+    librosa \
+    pydub
 
 # 安装MuseTalk依赖
 RUN pip install --no-cache-dir \

@@ -58,3 +58,17 @@ Dockerfile中的 `COPY templates/ /app/templates/` 失败，因为templates目�
 
 **解决方案：**
 需要创建templates目录和基本的模板文件。
+
+
+## LiveTalking 构建失败 (第二次)
+
+**错误信息：**
+```
+ERROR: failed to build: failed to solve: process "/bin/sh -c pip install --no-cache-dir av==10.0.0 soundfile==0.12.1 librosa==0.10.1 pydub==0.25.1" did not complete successfully: exit code: 1
+```
+
+**原因分析：**
+av==10.0.0版本安装失败，可能与其他依赖不兼容。
+
+**解决方案：**
+修改av版本为11.0.0或移除版本限制。
