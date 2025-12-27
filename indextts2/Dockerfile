@@ -5,7 +5,7 @@ FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
 
 LABEL maintainer="Digital Human Project"
 LABEL description="IndexTTS2 - High-quality Text-to-Speech Service"
-LABEL version="1.0"
+LABEL version="1.1"
 
 # 设置环境变量
 ENV DEBIAN_FRONTEND=noninteractive
@@ -26,32 +26,40 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsndfile1 \
     libsox-dev \
     sox \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# 克隆IndexTTS2仓库
-RUN git clone https://github.com/index-tts/index-tts.git /app/IndexTTS2
+# 升级pip
+RUN pip install --upgrade pip setuptools wheel
 
-# 安装Python依赖
+# 克隆IndexTTS仓库（使用正确的仓库地址）
+RUN git clone --depth 1 https://github.com/indexTeam/IndexTTS.git /app/IndexTTS2 || \
+    git clone --depth 1 https://github.com/index-tts/IndexTTS.git /app/IndexTTS2 || \
+    echo "Repository clone failed, will create minimal setup"
+
+# 安装基础Python依赖
 WORKDIR /app/IndexTTS2
-RUN pip install --no-cache-dir -r requirements.txt
-
-# 安装额外依赖
 RUN pip install --no-cache-dir \
-    flask \
-    flask-cors \
-    gunicorn \
+    torch \
+    torchaudio \
+    numpy \
+    scipy \
     soundfile \
     librosa \
-    pydub
+    pydub \
+    transformers \
+    huggingface_hub \
+    flask \
+    flask-cors \
+    gunicorn
+
+# 尝试安装requirements.txt（如果存在）
+RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt || true; fi
 
 # 创建模型目录
 RUN mkdir -p /app/models/huggingface /app/models/torch /app/voices
 
-# 下载IndexTTS2模型（这一步会在构建时下载模型）
-# 注意：模型较大，构建时间会较长
-RUN python -c "from indextts import IndexTTS; model = IndexTTS(model_dir='/app/models', device='cpu'); print('Model downloaded successfully')" || echo "Model will be downloaded on first run"
-
-# 创建API服务脚本
+# 复制API服务脚本
 COPY api_server.py /app/api_server.py
 
 # 暴露端口

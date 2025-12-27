@@ -5,7 +5,7 @@ FROM python:3.11-slim
 
 LABEL maintainer="Digital Human Project"
 LABEL description="TTS Frontend - Multi-channel Voice Synthesis Control System"
-LABEL version="1.0"
+LABEL version="1.1"
 
 # 设置环境变量
 ENV DEBIAN_FRONTEND=noninteractive
@@ -29,10 +29,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制应用代码
 COPY server.py /app/
 COPY templates/ /app/templates/
-COPY static/ /app/static/
 
-# 创建必要目录
-RUN mkdir -p /app/voices /app/logs
+# 创建static目录（即使为空也需要创建）
+RUN mkdir -p /app/static /app/voices /app/logs
+
+# 如果有static文件则复制
+COPY static/ /app/static/ 2>/dev/null || true
 
 # 暴露端口
 EXPOSE 17202

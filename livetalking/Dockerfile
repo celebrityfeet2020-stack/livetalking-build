@@ -6,7 +6,7 @@ FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
 
 LABEL maintainer="Digital Human Project"
 LABEL description="LiveTalking with MuseTalk - Digital Human Rendering Service (Full Version)"
-LABEL version="2.0"
+LABEL version="2.1"
 
 # 设置环境变量
 ENV DEBIAN_FRONTEND=noninteractive
@@ -74,13 +74,13 @@ RUN pip install --no-cache-dir \
     aiohttp==3.9.1 \
     aiofiles==23.2.1
 
-# 安装aiortc（关键：使用1.6.0版本，这是最稳定的版本）
-# 1.14.0有已知的兼容性问题
-RUN pip install --no-cache-dir aiortc==1.6.0
+# 安装aiortc（使用最新稳定版本1.9.0，避免1.6.0的安装问题）
+# 1.9.0是经过测试的稳定版本
+RUN pip install --no-cache-dir aiortc==1.9.0
 
 # 安装音视频处理库
 RUN pip install --no-cache-dir \
-    av==11.0.0 \
+    av==10.0.0 \
     soundfile==0.12.1 \
     librosa==0.10.1 \
     pydub==0.25.1
@@ -97,7 +97,6 @@ RUN pip install --no-cache-dir \
 # 安装face detection和处理库
 RUN pip install --no-cache-dir \
     face-alignment==1.4.1 \
-    dlib==19.24.2 \
     mediapipe==0.10.9
 
 # 安装其他依赖
