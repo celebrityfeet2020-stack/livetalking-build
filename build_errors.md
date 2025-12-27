@@ -44,3 +44,17 @@ aiortc==1.6.0版本安装失败。这可能是因为：
 
 **解决方案：**
 需要修改Dockerfile，使用正确的aiortc版本（如1.9.0或最新版本）。
+
+
+## TTS Frontend 构建失败 (第二次)
+
+**错误信息：**
+```
+ERROR: failed to build: failed to solve: failed to compute cache key: failed to calculate checksum of ref: "/||": not found
+```
+
+**原因分析：**
+Dockerfile中的 `COPY templates/ /app/templates/` 失败，因为templates目录不存在。
+
+**解决方案：**
+需要创建templates目录和基本的模板文件。

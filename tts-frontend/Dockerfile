@@ -5,7 +5,7 @@ FROM python:3.11-slim
 
 LABEL maintainer="Digital Human Project"
 LABEL description="TTS Frontend - Multi-channel Voice Synthesis Control System"
-LABEL version="1.1"
+LABEL version="1.2"
 
 # 设置环境变量
 ENV DEBIAN_FRONTEND=noninteractive
@@ -20,21 +20,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# 创建必要目录
+RUN mkdir -p /app/templates /app/static /app/voices /app/logs
+
 # 复制依赖文件
 COPY requirements.txt /app/
 
 # 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 复制应用代码
+# 复制应用代码（分开复制避免目录问题）
 COPY server.py /app/
-COPY templates/ /app/templates/
-
-# 创建static目录（即使为空也需要创建）
-RUN mkdir -p /app/static /app/voices /app/logs
-
-# 如果有static文件则复制
-COPY static/ /app/static/ 2>/dev/null || true
+COPY templates/*.html /app/templates/
+COPY static/.gitkeep /app/static/
 
 # 暴露端口
 EXPOSE 17202
