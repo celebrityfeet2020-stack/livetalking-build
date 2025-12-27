@@ -91,3 +91,18 @@ MuseTalk模型下载失败。可能是因为：
 1. 移除构建时的模型下载步骤
 2. 让模型在运行时下载
 3. 或者使用try-except包裹并允许失败
+
+
+## LiveTalking 运行时错误
+
+**错误信息：**
+```
+ImportError: cannot import name 'cached_download' from 'huggingface_hub'
+```
+
+**原因分析：**
+huggingface_hub版本过高，`cached_download`函数在新版本中已被移除。
+diffusers==0.24.0需要较旧版本的huggingface_hub。
+
+**解决方案：**
+需要降级huggingface_hub版本，或升级diffusers版本。

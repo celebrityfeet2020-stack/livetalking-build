@@ -86,13 +86,14 @@ RUN pip install --no-cache-dir \
     pydub
 
 # 安装MuseTalk依赖
+# 注意：huggingface_hub必须使用兼容版本，避免cached_download报错
 RUN pip install --no-cache-dir \
-    diffusers==0.24.0 \
+    huggingface_hub==0.16.4 \
+    diffusers==0.21.0 \
     transformers==4.36.2 \
     accelerate==0.25.0 \
     omegaconf==2.3.0 \
-    safetensors==0.4.1 \
-    huggingface_hub==0.20.2
+    safetensors==0.4.1
 
 # 安装face detection和处理库
 RUN pip install --no-cache-dir \
