@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>数字人播放器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            background: #000;
+        }
+        #video-container {
+            width: 1920px;
+            height: 1080px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+        video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        #status {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #f90;
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+            z-index: 100;
+            display: none;
+        }
+        #status.show {
+            display: block;
+        }
+        #status.connected {
+            color: #0f0;
+        }
+        #status.error {
+            color: #f00;
+        }
+    </style>
+</head>
+<body>
+    <div id="video-container">
+        <video id="video" autoplay playsinline muted></video>
+    </div>
+    <div id="status" class="show">连接中...</div>
+    
+    <script>
+        (function() {
+            var pc = null;
+            var sessionid = 0;
+            var statusEl = document.getElementById('status');
+            var videoEl = document.getElementById('video');
+            var reconnectTimer = null;
+            var reconnectDelay = 3000;
+            var maxReconnectDelay = 30000;
+            var TTS_FRONTEND_URL = 'http://192.168.9.68:17202';
+            
+            // 获取URL参数
+            var urlParams = new URLSearchParams(window.location.search);
+            var hideStatus = urlParams.get('hideStatus') === '1';
+            
+            function updateStatus(text, className) {
+                if (hideStatus && className === 'connected') {
+                    statusEl.classList.remove('show');
+                } else {
+                    statusEl.textContent = text;
+                    statusEl.className = 'show ' + (className || '');
+                }
+            }
+            
+            function reportStatus(connected) {
+                // 向TTS前端报告连接状态
+                fetch(TTS_FRONTEND_URL + '/digital-human/status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        connected: connected,
+                        sessionid: sessionid
+                    })
+                }).catch(function(e) {
+                    console.log('Report status failed:', e);
+                });
+            }
+            
+            function negotiate() {
+                updateStatus('连接中...', '');
+                
+                pc.addTransceiver('video', {direction: 'recvonly'});
+                pc.addTransceiver('audio', {direction: 'recvonly'});
+                
+                return pc.createOffer().then(function(offer) {
+                    return pc.setLocalDescription(offer);
+                }).then(function() {
+                    return new Promise(function(resolve) {
+                        if (pc.iceGatheringState === 'complete') {
+                            resolve();
+                        } else {
+                            function checkState() {
+                                if (pc.iceGatheringState === 'complete') {
+                                    pc.removeEventListener('icegatheringstatechange', checkState);
+                                    resolve();
+                                }
+                            }
+                            pc.addEventListener('icegatheringstatechange', checkState);
+                        }
+                    });
+                }).then(function() {
+                    var offer = pc.localDescription;
+                    return fetch('/offer', {
+                        body: JSON.stringify({
+                            sdp: offer.sdp,
+                            type: offer.type
+                        }),
+                        headers: {'Content-Type': 'application/json'},
+                        method: 'POST'
+                    });
+                }).then(function(response) {
+                    return response.json();
+                }).then(function(answer) {
+                    if (answer.code === -1) {
+                        throw new Error(answer.msg);
+                    }
+                    sessionid = answer.sessionid;
+                    console.log('sessionid:', sessionid);
+                    return pc.setRemoteDescription(answer);
+                }).catch(function(e) {
+                    console.error('negotiate error:', e);
+                    updateStatus('连接失败: ' + e.message, 'error');
+                    scheduleReconnect();
+                });
+            }
+            
+            function connect() {
+                if (reconnectTimer) {
+                    clearTimeout(reconnectTimer);
+                    reconnectTimer = null;
+                }
+                
+                var config = {
+                    sdpSemantics: 'unified-plan',
+                    iceServers: [
+                        {urls: 'stun:stun.l.google.com:19302'},
+                        {urls: 'stun:stun.miwifi.com:3478'}
+                    ]
+                };
+                
+                pc = new RTCPeerConnection(config);
+                
+                pc.addEventListener('connectionstatechange', function() {
+                    console.log('Connection state:', pc.connectionState);
+                    if (pc.connectionState === 'connected') {
+                        updateStatus('已连接', 'connected');
+                        reportStatus(true);
+                        reconnectDelay = 3000; // 重置重连延迟
+                    } else if (pc.connectionState === 'failed') {
+                        updateStatus('连接失败', 'error');
+                        reportStatus(false);
+                        scheduleReconnect();
+                    } else if (pc.connectionState === 'closed') {
+                        reportStatus(false);
+                    }
+                });
+                
+                pc.addEventListener('track', function(evt) {
+                    console.log('Track received:', evt.track.kind);
+                    if (evt.track.kind === 'video') {
+                        videoEl.srcObject = evt.streams[0];
+                        // 视频加载后隐藏状态
+                        videoEl.onloadeddata = function() {
+                            if (hideStatus) {
+                                statusEl.classList.remove('show');
+                            }
+                        };
+                    }
+                });
+                
+                negotiate();
+            }
+            
+            function disconnect() {
+                if (pc) {
+                    pc.close();
+                    pc = null;
+                }
+                videoEl.srcObject = null;
+                reportStatus(false);
+            }
+            
+            function scheduleReconnect() {
+                if (reconnectTimer) return;
+                
+                console.log('Scheduling reconnect in', reconnectDelay, 'ms');
+                reconnectTimer = setTimeout(function() {
+                    reconnectTimer = null;
+                    disconnect();
+                    connect();
+                    // 指数退避
+                    reconnectDelay = Math.min(reconnectDelay * 1.5, maxReconnectDelay);
+                }, reconnectDelay);
+            }
+            
+            // 页面关闭时断开连接
+            window.addEventListener('beforeunload', function() {
+                reportStatus(false);
+                disconnect();
+            });
+            
+            // 自动连接
+            connect();
+        })();
+    </script>
+</body>
+</html>

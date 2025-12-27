@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveTalking WebRTC</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        .controls label {
+            display: inline-block;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .video-container {
+            background: #000;
+            margin: 20px 0;
+        }
+        video {
+            width: 100%;
+            max-width: 450px;
+            display: block;
+        }
+        .input-section {
+            margin-top: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 80px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LiveTalking WebRTC 测试</h1>
+        
+        <div class="controls">
+            <label>
+                <input type="checkbox" id="use-stun"> Use STUN server
+            </label>
+        </div>
+        
+        <div class="controls">
+            <button id="start">Start</button>
+            <button id="stop" disabled>Stop</button>
+            <button id="startRecording" disabled>Start Recording</button>
+            <button id="stopRecording" disabled>Stop Recording</button>
+        </div>
+        
+        <div id="status" class="status disconnected">未连接</div>
+        
+        <div class="input-section">
+            <h3>input text</h3>
+            <textarea id="text" placeholder="输入要说的文字..."></textarea>
+            <button id="send">Send</button>
+        </div>
+        
+        <h3>Media</h3>
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+        </div>
+    </div>
+    
+    <script src="client.js"></script>
+    <script>
+        var pc = null;
+        var sessionid = 0;
+        var mediaRecorder = null;
+        var recordedChunks = [];
+        
+        function updateStatus(state) {
+            var statusEl = document.getElementById('status');
+            statusEl.className = 'status ' + state;
+            if (state === 'connected') {
+                statusEl.textContent = '已连接 (sessionid: ' + sessionid + ')';
+            } else if (state === 'connecting') {
+                statusEl.textContent = '连接中...';
+            } else {
+                statusEl.textContent = '未连接';
+            }
+        }
+        
+        function negotiate() {
+            updateStatus('connecting');
+            
+            pc.addTransceiver('video', {direction: 'recvonly'});
+            pc.addTransceiver('audio', {direction: 'recvonly'});
+            
+            return pc.createOffer().then(function(offer) {
+                return pc.setLocalDescription(offer);
+            }).then(function() {
+                return new Promise(function(resolve) {
+                    if (pc.iceGatheringState === 'complete') {
+                        resolve();
+                    } else {
+                        function checkState() {
+                            if (pc.iceGatheringState === 'complete') {
+                                pc.removeEventListener('icegatheringstatechange', checkState);
+                                resolve();
+                            }
+                        }
+                        pc.addEventListener('icegatheringstatechange', checkState);
+                    }
+                });
+            }).then(function() {
+                var offer = pc.localDescription;
+                return fetch('/offer', {
+                    body: JSON.stringify({
+                        sdp: offer.sdp,
+                        type: offer.type
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    method: 'POST'
+                });
+            }).then(function(response) {
+                return response.json();
+            }).then(function(answer) {
+                if (answer.code === -1) {
+                    throw new Error(answer.msg);
+                }
+                sessionid = answer.sessionid;
+                console.log('sessionid:', sessionid);
+                return pc.setRemoteDescription(answer);
+            }).catch(function(e) {
+                console.error('negotiate error:', e);
+                updateStatus('disconnected');
+            });
+        }
+        
+        function start() {
+            var config = {
+                sdpSemantics: 'unified-plan'
+            };
+            
+            if (document.getElementById('use-stun').checked) {
+                config.iceServers = [
+                    {urls: 'stun:stun.l.google.com:19302'},
+                    {urls: 'stun:stun.miwifi.com:3478'}
+                ];
+            }
+            
+            pc = new RTCPeerConnection(config);
+            
+            pc.addEventListener('connectionstatechange', function() {
+                console.log('Connection state:', pc.connectionState);
+                if (pc.connectionState === 'connected') {
+                    updateStatus('connected');
+                } else if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                    updateStatus('disconnected');
+                }
+            });
+            
+            pc.addEventListener('track', function(evt) {
+                console.log('Track received:', evt.track.kind);
+                if (evt.track.kind === 'video') {
+                    document.getElementById('video').srcObject = evt.streams[0];
+                }
+            });
+            
+            document.getElementById('start').disabled = true;
+            document.getElementById('stop').disabled = false;
+            document.getElementById('startRecording').disabled = false;
+            
+            negotiate();
+        }
+        
+        function stop() {
+            if (pc) {
+                pc.close();
+                pc = null;
+            }
+            
+            document.getElementById('start').disabled = false;
+            document.getElementById('stop').disabled = true;
+            document.getElementById('startRecording').disabled = true;
+            document.getElementById('stopRecording').disabled = true;
+            document.getElementById('video').srcObject = null;
+            
+            updateStatus('disconnected');
+        }
+        
+        function sendText() {
+            var text = document.getElementById('text').value;
+            if (!text || !sessionid) return;
+            
+            console.log('Sending:', text);
+            console.log('sessionid:', sessionid);
+            
+            fetch('/human', {
+                body: JSON.stringify({
+                    type: 'echo',
+                    text: text,
+                    sessionid: sessionid
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                method: 'POST'
+            }).then(function(response) {
+                return response.json();
+            }).then(function(result) {
+                console.log('Send result:', result);
+            }).catch(function(e) {
+                console.error('Send error:', e);
+            });
+        }
+        
+        function startRecording() {
+            var video = document.getElementById('video');
+            var stream = video.srcObject;
+            if (!stream) return;
+            
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream, {mimeType: 'video/webm'});
+            
+            mediaRecorder.ondataavailable = function(e) {
+                if (e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+            
+            mediaRecorder.onstop = function() {
+                var blob = new Blob(recordedChunks, {type: 'video/webm'});
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'recording.webm';
+                a.click();
+            };
+            
+            mediaRecorder.start();
+            console.log('Starting recording...');
+            console.log('Recording started.');
+            
+            document.getElementById('startRecording').disabled = true;
+            document.getElementById('stopRecording').disabled = false;
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                console.log('Stopping recording...');
+                mediaRecorder.stop();
+                console.log('Recording stopped.');
+            }
+            
+            document.getElementById('startRecording').disabled = false;
+            document.getElementById('stopRecording').disabled = true;
+        }
+        
+        // 绑定事件
+        document.getElementById('start').addEventListener('click', start);
+        document.getElementById('stop').addEventListener('click', stop);
+        document.getElementById('send').addEventListener('click', sendText);
+        document.getElementById('startRecording').addEventListener('click', startRecording);
+        document.getElementById('stopRecording').addEventListener('click', stopRecording);
+        
+        // 回车发送
+        document.getElementById('text').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendText();
+            }
+        });
+        
+        // 页面关闭时断开连接
+        window.addEventListener('beforeunload', stop);
+    </script>
+</body>
+</html>

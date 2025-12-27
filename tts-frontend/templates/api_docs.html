@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 文档 - IndexTTS2 控制台</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #1e293b;
+        }
+        h1 { color: #6366f1; border-bottom: 2px solid #6366f1; padding-bottom: 10px; }
+        h2 { color: #4f46e5; margin-top: 30px; }
+        h3 { color: #64748b; }
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+        }
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        .endpoint {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        .method.get { background: #22c55e; color: white; }
+        .method.post { background: #3b82f6; color: white; }
+        .method.delete { background: #ef4444; color: white; }
+        .url { font-family: monospace; font-size: 14px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 10px;
+            text-align: left;
+        }
+        th { background: #f8fafc; }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #6366f1;
+            text-decoration: none;
+        }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-link">← 返回控制台</a>
+    
+    <h1>📖 API 文档</h1>
+    <p>IndexTTS2 控制台 API 接口说明</p>
+    
+    <h2>基础信息</h2>
+    <table>
+        <tr><th>基础URL</th><td><code>http://192.168.9.68:17202</code></td></tr>
+        <tr><th>数据格式</th><td>JSON / form-data</td></tr>
+        <tr><th>字符编码</th><td>UTF-8</td></tr>
+    </table>
+    
+    <h2>核心接口</h2>
+    
+    <div class="endpoint">
+        <h3><span class="method post">POST</span><span class="url">/tts</span></h3>
+        <p>发送文本到数字人进行语音合成和播报</p>
+        
+        <h4>请求参数</h4>
+        <table>
+            <tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+            <tr><td>text</td><td>string</td><td>是</td><td>要合成的文本内容</td></tr>
+            <tr><td>voice_id</td><td>string</td><td>否</td><td>音色ID，默认为 "default"</td></tr>
+            <tr><td>channel_id</td><td>int</td><td>否</td><td>通道ID，默认为 100（数字人通道）</td></tr>
+        </table>
+        
+        <h4>请求示例 (JSON)</h4>
+        <pre><code>curl -X POST http://192.168.9.68:17202/tts \
+  -H "Content-Type: application/json" \
+  -d '{"text": "你好，我是数字人助手", "voice_id": "default"}'</code></pre>
+        
+        <h4>请求示例 (form-data)</h4>
+        <pre><code>curl -X POST http://192.168.9.68:17202/tts \
+  -F "text=你好，我是数字人助手" \
+  -F "voice_id=default"</code></pre>
+        
+        <h4>响应示例</h4>
+        <pre><code>{
+  "success": true,
+  "message": "Sent to digital human"
+}</code></pre>
+    </div>
+    
+    <div class="endpoint">
+        <h3><span class="method get">GET</span><span class="url">/health</span></h3>
+        <p>获取系统健康状态</p>
+        
+        <h4>响应示例</h4>
+        <pre><code>{
+  "status": "healthy",
+  "model_loaded": true,
+  "digital_human_connected": true,
+  "templates_count": 3,
+  "timestamp": 1703750400.123
+}</code></pre>
+    </div>
+    
+    <div class="endpoint">
+        <h3><span class="method get">GET</span><span class="url">/voices</span></h3>
+        <p>获取音色列表</p>
+        
+        <h4>响应示例</h4>
+        <pre><code>{
+  "voices": [
+    {"id": "voice1", "name": "voice1", "description": "女声"},
+    {"id": "voice2", "name": "voice2", "description": "男声"}
+  ]
+}</code></pre>
+    </div>
+    
+    <div class="endpoint">
+        <h3><span class="method post">POST</span><span class="url">/voices</span></h3>
+        <p>上传新音色（仅需音频文件，无需参考文本）</p>
+        
+        <h4>请求参数 (form-data)</h4>
+        <table>
+            <tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+            <tr><td>voice_id</td><td>string</td><td>是</td><td>音色ID</td></tr>
+            <tr><td>file</td><td>file</td><td>是</td><td>WAV格式音频文件</td></tr>
+            <tr><td>description</td><td>string</td><td>否</td><td>音色描述</td></tr>
+        </table>
+        
+        <h4>请求示例</h4>
+        <pre><code>curl -X POST http://192.168.9.68:17202/voices \
+  -F "voice_id=my_voice" \
+  -F "description=我的音色" \
+  -F "file=@voice_sample.wav"</code></pre>
+    </div>
+    
+    <div class="endpoint">
+        <h3><span class="method delete">DELETE</span><span class="url">/voices/{voice_id}</span></h3>
+        <p>删除音色</p>
+        
+        <h4>请求示例</h4>
+        <pre><code>curl -X DELETE http://192.168.9.68:17202/voices/my_voice</code></pre>
+    </div>
+    
+    <div class="endpoint">
+        <h3><span class="method get">GET</span><span class="url">/digital-human/status</span></h3>
+        <p>获取数字人连接状态</p>
+        
+        <h4>响应示例</h4>
+        <pre><code>{
+  "connected": true,
+  "sessionid": 602574
+}</code></pre>
+    </div>
+    
+    <div class="endpoint">
+        <h3><span class="method post">POST</span><span class="url">/digital-human/status</span></h3>
+        <p>更新数字人连接状态（由player.html调用）</p>
+        
+        <h4>请求参数</h4>
+        <pre><code>{
+  "connected": true,
+  "sessionid": 602574
+}</code></pre>
+    </div>
+    
+    <h2>数字人播放器</h2>
+    <p>用于OBS直播推流的数字人播放器页面：</p>
+    <ul>
+        <li><strong>播放器地址：</strong> <code>http://192.168.9.68:17310/player.html</code></li>
+        <li><strong>隐藏状态文字：</strong> <code>http://192.168.9.68:17310/player.html?hideStatus=1</code></li>
+        <li><strong>分辨率：</strong> 1920x1080 (横屏)</li>
+    </ul>
+    
+    <h2>注意事项</h2>
+    <ul>
+        <li>IndexTTS2 使用 "Same as the voice reference" 模式，上传音色只需要音频文件，不需要参考文本</li>
+        <li>数字人通道 ID 固定为 100</li>
+        <li>数字人不支持并发，同一时间只能有一个 WebRTC 连接</li>
+        <li>TTS 支持并发请求，但会按顺序处理</li>
+    </ul>
+    
+    <h2>错误码</h2>
+    <table>
+        <tr><th>HTTP状态码</th><th>说明</th></tr>
+        <tr><td>200</td><td>成功</td></tr>
+        <tr><td>400</td><td>请求参数错误</td></tr>
+        <tr><td>404</td><td>资源不存在</td></tr>
+        <tr><td>500</td><td>服务器内部错误</td></tr>
+    </table>
+</body>
+</html>

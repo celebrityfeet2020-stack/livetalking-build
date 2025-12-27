@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexTTS2 控制台</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--text);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .nav-links {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .status-item {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .status-dot.green { background: #22c55e; }
+        .status-dot.yellow { background: #f59e0b; }
+        .status-dot.red { background: #ef4444; }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--text-light);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        select.form-control {
+            cursor: pointer;
+        }
+        
+        textarea.form-control {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        
+        .btn-outline:hover {
+            background: var(--bg);
+        }
+        
+        .queue-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .queue-item {
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        
+        .queue-item:last-child {
+            border-bottom: none;
+        }
+        
+        .voice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .voice-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .voice-card.active {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+        
+        .row {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .col {
+            flex: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎙️ IndexTTS2 控制台</h1>
+        <p>多通道语音合成与数字人控制系统</p>
+        
+        <div class="nav-links">
+            <a href="/swagger">📚 API文档 (Swagger)</a>
+            <a href="/api-docs">📖 API详细说明</a>
+            <a href="/health">❤️ 健康检查</a>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-dot" id="model-status"></span>
+                模型: <span id="model-text">检查中...</span>
+            </div>
+            <div class="status-item">
+                通道: <span id="channel-count">1</span>
+            </div>
+            <div class="status-item">
+                音色: <span id="voice-count">0</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot" id="dh-status"></span>
+                数字人: <span id="dh-text">检查中...</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 数字人通道 -->
+        <div class="card">
+            <div class="card-title">🤖 数字人通道 (ID: 100)</div>
+            
+            <div style="text-align: center; margin-bottom: 15px;">
+                <span>数字人展示端:</span>
+                <a href="http://192.168.9.68:17310/player.html?hideStatus=1" target="_blank">🖥️ 打开播放器 (OBS推荐)</a>
+                <br>
+                <small>OBS链接: http://192.168.9.68:17310/player.html?hideStatus=1</small>
+                <br>
+                <span>状态: <span id="channel-status">检查中...</span></span>
+            </div>
+            
+            <div class="form-group">
+                <label>🎵 数字人音色</label>
+                <select class="form-control" id="voice-select">
+                    <option value="default">默认音色</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <input type="text" class="form-control" id="text-input" placeholder="输入文本让数字人说话...">
+            </div>
+            
+            <button class="btn btn-primary" onclick="sendText()">发送</button>
+        </div>
+        
+        <div class="row">
+            <!-- 消息队列 -->
+            <div class="col">
+                <div class="card">
+                    <div class="card-title">📝 正常消息队列</div>
+                    <div class="queue-list" id="normal-queue">
+                        <div class="queue-item" style="color: var(--text-light);">暂无消息</div>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; justify-content: space-between;">
+                        <span>队列: 0/5 | 已处理: 0</span>
+                        <div>
+                            <button class="btn btn-outline" onclick="clearQueue('normal')">清空当前</button>
+                            <button class="btn btn-danger" onclick="clearQueue('all')">清空全部</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 待回捞队列 -->
+            <div class="col">
+                <div class="card">
+                    <div class="card-title">🔄 待回捞队列</div>
+                    <div class="queue-list" id="retry-queue">
+                        <div class="queue-item" style="color: var(--text-light);">暂无消息</div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <span>待回捞: 0/100 | 已丢弃: 0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 音色管理 -->
+        <div class="card">
+            <div class="card-title">🎵 音色管理</div>
+            <button class="btn btn-success" onclick="showUploadModal()">+ 上传音色</button>
+            
+            <div class="voice-grid" id="voice-grid" style="margin-top: 15px;">
+                <!-- 音色卡片将通过JS动态生成 -->
+            </div>
+        </div>
+        
+        <!-- TTS测试 -->
+        <div class="card">
+            <div class="card-title">🔊 TTS 测试</div>
+            
+            <div class="form-group">
+                <label>选择通道</label>
+                <select class="form-control" id="test-channel">
+                    <option value="local">本地播放（不推送）</option>
+                    <option value="100">数字人通道</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>选择音色</label>
+                <select class="form-control" id="test-voice">
+                    <option value="default">默认音色</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>测试文本</label>
+                <textarea class="form-control" id="test-text" placeholder="输入测试文本...">你好，我是数字人助手。</textarea>
+            </div>
+            
+            <button class="btn btn-primary" onclick="testTTS()">测试合成</button>
+        </div>
+    </div>
+    
+    <!-- 上传音色模态框 -->
+    <div class="modal" id="upload-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>上传音色模板</h3>
+                <button class="modal-close" onclick="hideUploadModal()">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label>音色 ID</label>
+                <input type="text" class="form-control" id="upload-voice-id" placeholder="如: 女声1">
+            </div>
+            
+            <div class="form-group">
+                <label>描述</label>
+                <input type="text" class="form-control" id="upload-description" placeholder="音色描述（可选）">
+            </div>
+            
+            <div class="form-group">
+                <label>音频文件 (WAV)</label>
+                <input type="file" class="form-control" id="upload-file" accept=".wav">
+            </div>
+            
+            <button class="btn btn-primary" onclick="uploadVoice()">上传音色</button>
+        </div>
+    </div>
+    
+    <script>
+        // 全局状态
+        let voices = [];
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkHealth();
+            loadVoices();
+            
+            // 定期检查状态
+            setInterval(checkHealth, 5000);
+            
+            // 回车发送
+            document.getElementById('text-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendText();
+                }
+            });
+        });
+        
+        // 检查健康状态
+        function checkHealth() {
+            fetch('/health')
+                .then(r => r.json())
+                .then(data => {
+                    // 模型状态
+                    const modelStatus = document.getElementById('model-status');
+                    const modelText = document.getElementById('model-text');
+                    if (data.model_loaded) {
+                        modelStatus.className = 'status-dot green';
+                        modelText.textContent = '✅ 已加载';
+                    } else {
+                        modelStatus.className = 'status-dot red';
+                        modelText.textContent = '❌ 未加载';
+                    }
+                    
+                    // 数字人状态
+                    const dhStatus = document.getElementById('dh-status');
+                    const dhText = document.getElementById('dh-text');
+                    const channelStatus = document.getElementById('channel-status');
+                    if (data.digital_human_connected) {
+                        dhStatus.className = 'status-dot green';
+                        dhText.textContent = '✅ 已连接';
+                        channelStatus.innerHTML = '✅ 已连接，可发送文本';
+                    } else {
+                        dhStatus.className = 'status-dot yellow';
+                        dhText.textContent = '⚠️ 等待连接';
+                        channelStatus.innerHTML = '⚠️ 等待连接，请打开播放器';
+                    }
+                    
+                    // 音色数量
+                    document.getElementById('voice-count').textContent = data.templates_count;
+                })
+                .catch(e => {
+                    console.error('Health check failed:', e);
+                });
+        }
+        
+        // 加载音色列表
+        function loadVoices() {
+            fetch('/voices')
+                .then(r => r.json())
+                .then(data => {
+                    voices = data.voices || [];
+                    updateVoiceSelects();
+                    updateVoiceGrid();
+                })
+                .catch(e => {
+                    console.error('Load voices failed:', e);
+                });
+        }
+        
+        // 更新音色选择框
+        function updateVoiceSelects() {
+            const selects = ['voice-select', 'test-voice'];
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                select.innerHTML = '<option value="default">默认音色</option>';
+                voices.forEach(v => {
+                    select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                });
+            });
+        }
+        
+        // 更新音色网格
+        function updateVoiceGrid() {
+            const grid = document.getElementById('voice-grid');
+            if (voices.length === 0) {
+                grid.innerHTML = '<p style="color: var(--text-light);">暂无自定义音色</p>';
+                return;
+            }
+            
+            grid.innerHTML = voices.map(v => `
+                <div class="voice-card">
+                    <div style="font-weight: 500;">${v.name}</div>
+                    <div style="font-size: 12px; color: var(--text-light);">${v.description || '无描述'}</div>
+                    <button class="btn btn-outline" style="margin-top: 10px;" onclick="deleteVoice('${v.id}')">删除</button>
+                </div>
+            `).join('');
+        }
+        
+        // 发送文本
+        function sendText() {
+            const text = document.getElementById('text-input').value.trim();
+            const voiceId = document.getElementById('voice-select').value;
+            
+            if (!text) {
+                alert('请输入文本');
+                return;
+            }
+            
+            fetch('/tts', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    text: text,
+                    voice_id: voiceId,
+                    channel_id: 100
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('text-input').value = '';
+                } else {
+                    alert('发送失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(e => {
+                alert('发送失败: ' + e.message);
+            });
+        }
+        
+        // 测试TTS
+        function testTTS() {
+            const channel = document.getElementById('test-channel').value;
+            const voiceId = document.getElementById('test-voice').value;
+            const text = document.getElementById('test-text').value.trim();
+            
+            if (!text) {
+                alert('请输入测试文本');
+                return;
+            }
+            
+            if (channel === 'local') {
+                alert('本地播放功能暂未实现');
+                return;
+            }
+            
+            fetch('/tts', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    text: text,
+                    voice_id: voiceId,
+                    channel_id: parseInt(channel)
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('发送成功');
+                } else {
+                    alert('发送失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(e => {
+                alert('发送失败: ' + e.message);
+            });
+        }
+        
+        // 显示上传模态框
+        function showUploadModal() {
+            document.getElementById('upload-modal').classList.add('show');
+        }
+        
+        // 隐藏上传模态框
+        function hideUploadModal() {
+            document.getElementById('upload-modal').classList.remove('show');
+        }
+        
+        // 上传音色
+        function uploadVoice() {
+            const voiceId = document.getElementById('upload-voice-id').value.trim();
+            const description = document.getElementById('upload-description').value.trim();
+            const file = document.getElementById('upload-file').files[0];
+            
+            if (!voiceId) {
+                alert('请输入音色ID');
+                return;
+            }
+            if (!file) {
+                alert('请选择音频文件');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('voice_id', voiceId);
+            formData.append('description', description);
+            formData.append('file', file);
+            
+            fetch('/voices', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('上传成功');
+                    hideUploadModal();
+                    loadVoices();
+                } else {
+                    alert('上传失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(e => {
+                alert('上传失败: ' + e.message);
+            });
+        }
+        
+        // 删除音色
+        function deleteVoice(voiceId) {
+            if (!confirm('确定要删除音色 "' + voiceId + '" 吗？')) {
+                return;
+            }
+            
+            fetch('/voices/' + voiceId, {
+                method: 'DELETE'
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    loadVoices();
+                } else {
+                    alert('删除失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(e => {
+                alert('删除失败: ' + e.message);
+            });
+        }
+        
+        // 清空队列
+        function clearQueue(type) {
+            alert('清空队列功能暂未实现');
+        }
+    </script>
+</body>
+</html>
