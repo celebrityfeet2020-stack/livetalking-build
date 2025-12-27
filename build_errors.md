@@ -106,3 +106,17 @@ diffusers==0.24.0需要较旧版本的huggingface_hub。
 
 **解决方案：**
 需要降级huggingface_hub版本，或升级diffusers版本。
+
+
+## LiveTalking 构建失败 (第四次)
+
+**错误信息：**
+```
+ERROR: failed to build: failed to solve: process "/bin/sh -c pip install --no-cache-dir huggingface_hub==0.16.4 diffusers==0.21.0 transformers==4.36.2 accelerate==0.25.0 omegaconf==2.3.0 safetensors==0.4.1" did not complete successfully: exit code: 1
+```
+
+**原因分析：**
+huggingface_hub==0.16.4与其他依赖版本不兼容。
+
+**解决方案：**
+尝试使用更兼容的版本组合，或者不指定具体版本让pip自动解决依赖。
